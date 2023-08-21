@@ -858,9 +858,6 @@ extern uint8_t tcpm_inquire_typec_attach_state(struct tcpc_device *tcpc);
 extern uint8_t tcpm_inquire_typec_role(struct tcpc_device *tcpc);
 extern uint8_t tcpm_inquire_typec_local_rp(struct tcpc_device *tcpc);
 
-extern int tcpm_typec_set_wake_lock(
-	struct tcpc_device *tcpc, bool user_lock);
-
 extern int tcpm_typec_set_usb_sink_curr(
 	struct tcpc_device *tcpc, int curr);
 
@@ -896,6 +893,9 @@ extern uint8_t tcpm_inquire_pd_data_role(
 	struct tcpc_device *tcpc);
 
 extern uint8_t tcpm_inquire_pd_power_role(
+	struct tcpc_device *tcpc);
+
+extern uint8_t tcpm_inquire_pd_state_curr(
 	struct tcpc_device *tcpc);
 
 extern uint8_t tcpm_inquire_pd_vconn_role(
@@ -1404,6 +1404,12 @@ static inline uint8_t tcpm_inquire_pd_data_role(
 }
 
 static inline uint8_t tcpm_inquire_pd_power_role(
+	struct tcpc_device *tcpc)
+{
+	return 0;
+}
+
+static inline uint8_t tcpm_inquire_pd_state_curr(
 	struct tcpc_device *tcpc)
 {
 	return 0;

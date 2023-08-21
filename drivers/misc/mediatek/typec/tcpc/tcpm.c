@@ -167,19 +167,6 @@ uint8_t tcpm_inquire_typec_local_rp(struct tcpc_device *tcpc)
 	return tcpc->typec_local_rp_level;
 }
 
-int tcpm_typec_set_wake_lock(struct tcpc_device *tcpc, bool user_lock)
-{
-	int ret;
-
-	mutex_lock(&tcpc->access_lock);
-	ret = tcpci_set_wake_lock(
-		tcpc, tcpc->wake_lock_pd, user_lock);
-	tcpc->wake_lock_user = user_lock;
-	mutex_unlock(&tcpc->access_lock);
-
-	return ret;
-}
-
 int tcpm_typec_set_usb_sink_curr(struct tcpc_device *tcpc, int curr)
 {
 	bool force_sink_vbus = true;
@@ -309,42 +296,56 @@ bool tcpm_inquire_pd_connected(struct tcpc_device *tcpc)
 	return pd_port->pe_data.pd_connected;
 }
 
-bool tcpm_inquire_pd_prev_connected(struct tcpc_device *tcpc)
+bool tcpm_inquire_pd_prev_connected(
+	struct tcpc_device *tcpc)
 {
 	struct pd_port *pd_port = &tcpc->pd_port;
 
 	return pd_port->pe_data.pd_prev_connected;
 }
 
-uint8_t tcpm_inquire_pd_data_role(struct tcpc_device *tcpc)
+uint8_t tcpm_inquire_pd_data_role(
+	struct tcpc_device *tcpc)
 {
 	struct pd_port *pd_port = &tcpc->pd_port;
 
 	return pd_port->data_role;
 }
 
-uint8_t tcpm_inquire_pd_power_role(struct tcpc_device *tcpc)
+uint8_t tcpm_inquire_pd_power_role(
+	struct tcpc_device *tcpc)
 {
 	struct pd_port *pd_port = &tcpc->pd_port;
 
 	return pd_port->power_role;
 }
 
-uint8_t tcpm_inquire_pd_vconn_role(struct tcpc_device *tcpc)
+uint8_t tcpm_inquire_pd_state_curr(
+	struct tcpc_device *tcpc)
+{
+	struct pd_port *pd_port = &tcpc->pd_port;
+
+	return pd_port->pe_state_curr;
+}
+
+uint8_t tcpm_inquire_pd_vconn_role(
+	struct tcpc_device *tcpc)
 {
 	struct pd_port *pd_port = &tcpc->pd_port;
 
 	return pd_port->vconn_role;
 }
 
-uint8_t tcpm_inquire_pd_pe_ready(struct tcpc_device *tcpc)
+uint8_t tcpm_inquire_pd_pe_ready(
+	struct tcpc_device *tcpc)
 {
 	struct pd_port *pd_port = &tcpc->pd_port;
 
 	return pd_port->pe_data.pe_ready;
 }
 
-uint8_t tcpm_inquire_cable_current(struct tcpc_device *tcpc)
+uint8_t tcpm_inquire_cable_current(
+	struct tcpc_device *tcpc)
 {
 	struct pd_port *pd_port = &tcpc->pd_port;
 

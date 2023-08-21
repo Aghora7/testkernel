@@ -345,11 +345,8 @@ static long seninf_ioctl(struct file *pfile,
 	}
 
 SENINF_IOCTL_EXIT:
-	if (pbuff != NULL) {
+	if (pbuff != NULL)
 		kfree(pbuff);
-		pbuff = NULL;
-	}
-
 	return ret;
 }
 

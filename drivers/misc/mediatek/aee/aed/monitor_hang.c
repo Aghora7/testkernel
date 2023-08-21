@@ -377,7 +377,6 @@ static long monitor_hang_ioctl(struct file *file, unsigned int cmd,
 	if (cmd == AEEIOCTL_SET_HANG_REBOOT &&
 		(!strncmp(current->comm, "init", 4))) {
 		reboot_flag = true;
-		hd_detect_enabled = 1;
 		hang_detect_counter = 5;
 		hd_timeout = 5;
 		pr_info("hang_detect: %s set reboot command.\n", current->comm);

@@ -2574,7 +2574,6 @@ static long imgsensor_ioctl(
 	default:
 		pr_debug("No such command %d\n", a_u4Command);
 		i4RetValue = -EPERM;
-		kfree(pBuff);
 		goto CAMERA_HW_Ioctl_EXIT;
 		break;
 	}
@@ -2590,8 +2589,9 @@ static long imgsensor_ioctl(
 		i4RetValue =  -EFAULT;
 		goto CAMERA_HW_Ioctl_EXIT;
 	}
-	kfree(pBuff);
 CAMERA_HW_Ioctl_EXIT:
+	if (pBuff != NULL)
+		kfree(pBuff);
 	return i4RetValue;
 }
 

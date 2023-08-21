@@ -1,7 +1,7 @@
 /******************************************************************************
- * mt6759 mtk_pwm_hal.h PWM Drvier
+ * mtk_pwm_hal.h PWM Drvier
  *
- * Copyright (c) 2016, Media Teck.inc
+ * Copyright (c) 2018, Media Teck.inc
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public Licence,
@@ -37,8 +37,6 @@ enum PWN_NO {
 	PWM2,
 	PWM3,
 	PWM4,
-	PWM5,
-	PWM6,
 	PWM_NUM,
 	PWM_MAX = PWM_NUM
 };
@@ -110,10 +108,6 @@ enum PWM_INT_ENABLE_BITS {
 	PWM3_INT_UNDERFLOW_EN,
 	PWM4_INT_FINISH_EN,
 	PWM4_INT_UNDERFLOW_EN,
-	PWM5_INT_FINISH_EN,
-	PWM5_INT_UNDERFLOW_EN,
-	PWM6_INT_FINISH_EN,
-	PWM6_INT_UNDERFLOW_EN,
 	PWM_INT_ENABLE_BITS_MAX,
 };
 
@@ -126,10 +120,6 @@ enum PWM_INT_STATUS_BITS {
 	PWM3_INT_UNDERFLOW_ST,
 	PWM4_INT_FINISH_ST,
 	PWM4_INT_UNDERFLOW_ST,
-	PWM5_INT_FINISH_ST,
-	PWM5_INT_UNDERFLOW_ST,
-	PWM6_INT_FINISH_ST,
-	PWM6_INT_UNDERFLOW_ST,
 	PWM_INT_STATUS_BITS_MAX,
 };
 

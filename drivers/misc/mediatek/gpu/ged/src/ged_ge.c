@@ -351,9 +351,19 @@ int ged_bridge_ge_get(
 	 */
 	int header_size = sizeof(struct GED_BRIDGE_OUT_GE_GET);
 
-	if (output_buffer_size <
-		header_size + (psGET_IN->uint32_size * sizeof(uint32_t))) {
-		pr_info("[%s] output_buffer_size (%d byte) < header_size + u32_size (%d byte)",
+	if (psGET_IN->uint32_offset < 0 ||
+			psGET_IN->uint32_offset >= 0x20000000ULL ||
+			psGET_IN->uint32_size < 0 ||
+			psGET_IN->uint32_size >= 0x20000000ULL) {
+		pr_info("[%s] invalid offset(%d) or size(%d)",
+				__func__,
+				psGET_IN->uint32_offset,
+				psGET_IN->uint32_size);
+		return -EFAULT;
+	}
+	if ((output_package_size - header_size) !=
+		psGET_IN->uint32_size * sizeof(uint32_t)) {
+		pr_info("[%s] data (%d byte) != u32_size (%d byte)",
 			__func__,
 			(unsigned int)output_buffer_size,
 			(unsigned int)(header_size+(psGET_IN->uint32_size * sizeof(uint32_t))));
@@ -377,9 +387,19 @@ int ged_bridge_ge_set(
 
 	int header_size = sizeof(struct GED_BRIDGE_IN_GE_SET);
 
-	if (input_buffer_size <
-		header_size+(psSET_IN->uint32_size * sizeof(uint32_t))) {
-		pr_info("[%s] input_buffer_size (%d byte) < header_size + u32_size (%d byte)",
+	if (psSET_IN->uint32_offset < 0 ||
+			psSET_IN->uint32_offset >= 0x20000000ULL ||
+			psSET_IN->uint32_size < 0 ||
+			psSET_IN->uint32_size >= 0x20000000ULL) {
+		pr_info("[%s] invalid offset(%d) or size(%d)",
+				__func__,
+				psSET_IN->uint32_offset,
+				psSET_IN->uint32_size);
+		return -EFAULT;
+	}
+	if ((input_package_size - header_size) !=
+		psSET_IN->uint32_size * sizeof(uint32_t)) {
+		pr_info("[%s] data (%d byte) != u32_size (%d byte)",
 			__func__,
 			(unsigned int)input_buffer_size,
 			(unsigned int)(header_size+(psSET_IN->uint32_size * sizeof(uint32_t))));

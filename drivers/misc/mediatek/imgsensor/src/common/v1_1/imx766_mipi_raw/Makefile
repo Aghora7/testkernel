@@ -11,5 +11,4 @@
 # GNU General Public License for more details.
 #
 
-obj-y += imx766mipiraw_Sensor.o
-obj-y += imx766_eeprom.o
+obj-y += imx355_ultra_ofilm_mipi_raw.o

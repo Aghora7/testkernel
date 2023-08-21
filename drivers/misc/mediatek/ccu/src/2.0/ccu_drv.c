@@ -436,7 +436,8 @@ static int ccu_open(struct inode *inode, struct file *flip)
 {
 	int ret = 0, i;
 
-	struct ccu_user_s *user = NULL;
+	struct ccu_user_s *user;
+	mutex_lock(&g_ccu_device->dev_mutex);
 
 	mutex_lock(&g_ccu_device->dev_mutex);
 
@@ -474,12 +475,8 @@ static int ccu_open(struct inode *inode, struct file *flip)
 	ccu_ion_init();
 
 	for (i = 0; i < CCU_IMPORT_BUF_NUM; i++)
-		import_buffer_handle[i] = (struct ion_handle *)
-					  CCU_IMPORT_BUF_UNDEF;
-
-	LOG_INF_MUST("%s-\n",
-		__func__);
-
+		import_buffer_handle[i] =
+		(struct ion_handle *)CCU_IMPORT_BUF_UNDEF;
 	mutex_unlock(&g_ccu_device->dev_mutex);
 
 	return ret;
@@ -966,16 +963,7 @@ static int ccu_release(struct inode *inode, struct file *flip)
 
 	mutex_lock(&g_ccu_device->dev_mutex);
 
-	LOG_INF_MUST("%s pid:%d tid:%d cnt:%d+\n",
-		__func__, user->open_pid, user->open_tgid, _user_count);
-	ccu_delete_user(user);
-	_user_count--;
-
-	if (_user_count > 0) {
-		LOG_INF_MUST("%s bypass release flow-", __func__);
-		mutex_unlock(&g_ccu_device->dev_mutex);
-		return 0;
-	}
+	LOG_INF_MUST("%s +", __func__);
 
 	ccu_force_powerdown();
 
@@ -1392,7 +1380,6 @@ static int __init CCU_INIT(void)
 	INIT_LIST_HEAD(&g_ccu_device->user_list);
 	mutex_init(&g_ccu_device->user_mutex);
 	mutex_init(&g_ccu_device->dev_mutex);
-	mutex_init(&g_ccu_device->clk_mutex);
 	mutex_init(&g_ccu_device->ion_client_mutex);
 	init_waitqueue_head(&g_ccu_device->cmd_wait);
 

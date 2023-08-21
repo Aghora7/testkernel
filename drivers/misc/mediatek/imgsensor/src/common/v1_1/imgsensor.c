@@ -2294,11 +2294,8 @@ static long imgsensor_ioctl(
 	}
 
 CAMERA_HW_Ioctl_EXIT:
-	if (pBuff != NULL) {
+	if (pBuff != NULL)
 		kfree(pBuff);
-		pBuff = NULL;
-	}
-
 	return i4RetValue;
 }
 

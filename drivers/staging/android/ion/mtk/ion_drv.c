@@ -469,7 +469,6 @@ static long ion_sys_cache_sync(struct ion_client *client,
 			 * get sync_va and sync_size here
 			 */
 			sync_size = buffer->size;
-
 			/* Do kernel map and do cache sync
 			 * 32bit project, vmap space is small,
 			 *    4MB as a boundary for mapping.
@@ -481,17 +480,18 @@ static long ion_sys_cache_sync(struct ion_client *client,
 			is_kernel_addr = 1;
 			ion_need_unmap_flag = 1;
 #else
-			if (sync_size <= SZ_4M) {
-				sync_va = (unsigned long)
-				ion_map_kernel(client, kernel_handle);
-				is_kernel_addr = 1;
-				ion_need_unmap_flag = 1;
-			} else {
-				ret =
-				ion_sys_cache_sync_buf(client, sync_type,
-						       kernel_handle);
-				goto out;
-			}
+				if (sync_size <= SZ_4M) {
+					sync_va = (unsigned long)
+					ion_map_kernel(client, kernel_handle);
+					is_kernel_addr = 1;
+					ion_need_unmap_flag = 1;
+				} else {
+					ret =
+					ion_sys_cache_sync_buf(client,
+							       sync_type,
+							       kernel_handle);
+					goto out;
+				}
 #endif
 			if (IS_ERR_OR_NULL(ERR_PTR((long)sync_va))) {
 				IONMSG("%s #%d: map failed\n", __func__,
@@ -611,7 +611,7 @@ static long ion_sys_ioctl(struct ion_client *client, unsigned int cmd,
 		    copy_from_user(&param, (void __user *)arg,
 				   sizeof(struct ion_sys_data));
 		if (ret_copy != 0) {
-			IONMSG("%s:err arg copy failed, ret_copy = %lu. %s(%s),%d, k:%d\n",
+			IONMSG("%s:err arg copy failed, ret_copy = %d. %s(%s),%d, k:%d\n",
 			       __func__, ret_copy, client->name, client->dbg_name,
 			       client->pid, from_kernel);
 			ret = -EFAULT;

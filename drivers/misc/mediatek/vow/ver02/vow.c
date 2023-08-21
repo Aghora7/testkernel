@@ -615,6 +615,12 @@ static void vow_service_Init(void)
 		vowserv.payloaddump_user_addr = 0;
 		vowserv.payloaddump_user_max_size = 0;
 		vowserv.payloaddump_user_return_size_addr = 0;
+		vowserv.payloaddump_scp_ptr =
+		    (char *)(scp_get_reserve_mem_virt(VOW_MEM_ID))
+		    + VOW_VOICEDATA_OFFSET + VOW_VOICEDATA_SIZE;
+		vowserv.payloaddump_scp_addr =
+		    scp_get_reserve_mem_phys(VOW_MEM_ID)
+		    + VOW_VOICEDATA_OFFSET + VOW_VOICEDATA_SIZE;
 		mutex_lock(&vow_payloaddump_mutex);
 		vowserv.payloaddump_kernel_ptr = NULL;
 		mutex_unlock(&vow_payloaddump_mutex);
@@ -640,8 +646,7 @@ static void vow_service_Init(void)
 		vowserv.mtkif_type = 0;
 		//set default value to platform identifier and version
 		memset(vowserv.google_engine_arch, 0, VOW_ENGINE_INFO_LENGTH_BYTE);
-		if (sprintf(vowserv.google_engine_arch, "32fe89be-5205-3d4b-b8cf-55d650d9d200") < 0)
-			VOWDRV_DEBUG("%s(), sprintf fail", __func__);
+		sprintf(vowserv.google_engine_arch, "32fe89be-5205-3d4b-b8cf-55d650d9d200");
 		vowserv.google_engine_version = DEFAULT_GOOGLE_ENGINE_VER;
 		memset(vowserv.alexa_engine_version, 0, VOW_ENGINE_INFO_LENGTH_BYTE);
 	} else {
@@ -674,6 +679,12 @@ static void vow_service_Init(void)
 			VOWDRV_DEBUG(
 			"IPIMSG_VOW_APREGDATA_ADDR ipi send error\n");
 		}
+		vow_ipi_send(IPIMSG_VOW_GET_ALEXA_ENGINE_VER, 0, NULL,
+				 VOW_IPI_BYPASS_ACK);
+		vow_ipi_send(IPIMSG_VOW_GET_GOOGLE_ENGINE_VER, 0, NULL,
+				 VOW_IPI_BYPASS_ACK);
+		vow_ipi_send(IPIMSG_VOW_GET_GOOGLE_ARCH, 0, NULL,
+				 VOW_IPI_BYPASS_ACK);
 #if VOW_PRE_LEARN_MODE
 		VowDrv_SetFlag(VOW_FLAG_PRE_LEARN, true);
 #endif
@@ -1277,21 +1288,6 @@ static void vow_service_ReadPayloadDumpData(unsigned int buf_length)
 	unsigned int tx_len;
 	unsigned int ret;
 
-	if (vowserv.payloaddump_kernel_ptr == NULL) {
-		VOWDRV_DEBUG("%s(), payloaddump_kernel_ptr is NULL!!\n", __func__);
-		return;
-	}
-
-	if (vowserv.payloaddump_user_max_size == 0) {
-		VOWDRV_DEBUG("%s(), MAX len = 0 !!\n", __func__);
-		return;
-	}
-	if (buf_length > vowserv.payloaddump_user_max_size) {
-		VOWDRV_DEBUG("%s(), [VOW PDR] buf_len=0x%x, MAX len=0x%x\n",
-			__func__, buf_length, vowserv.payloaddump_user_max_size);
-		return;
-	}
-
 	// copy from DRAM to get payload data
 	mutex_lock(&vow_payloaddump_mutex);
 	memcpy(&vowserv.payloaddump_kernel_ptr[0],
@@ -1307,7 +1303,7 @@ static void vow_service_ReadPayloadDumpData(unsigned int buf_length)
 	ret = copy_to_user(
 		      (void __user *)vowserv.payloaddump_user_addr,
 		      vowserv.payloaddump_kernel_ptr,
-		      buf_length);
+		      tx_len);
 	mutex_unlock(&vow_payloaddump_mutex);
 }
 #endif
@@ -2679,10 +2675,11 @@ static long VowDrv_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		if ((payload.return_payloaddump_addr == 0) ||
 		    (payload.max_payloaddump_size != VOW_VOICEDATA_SIZE)) {
 			VOWDRV_DEBUG("vow check payload fail: addr_%x, size_%x\n",
-				 (unsigned int)payload.return_payloaddump_addr,
-				 (unsigned int)payload.max_payloaddump_size);
+			     (unsigned int)payload.return_payloaddump_addr,
+			     (unsigned int)payload.max_payloaddump_size);
 			return false;
 		}
+
 		vowserv.payloaddump_user_addr =
 		    payload.return_payloaddump_addr;
 		vowserv.payloaddump_user_max_size =

@@ -128,6 +128,73 @@ static void usb_6765_dpidle_request(int mode)
 }
 #endif
 
+#ifdef CONFIG_USB_MTK_OTG
+static struct regmap *pericfg;
+
+static void mt_usb_wakeup(struct musb *musb, bool enable)
+{
+	u32 tmp;
+	bool is_con = musb->port1_status & USB_PORT_STAT_CONNECTION;
+
+	if (IS_ERR_OR_NULL(pericfg)) {
+		DBG(0, "init fail");
+		return;
+	}
+
+	DBG(0, "connection=%d\n", is_con);
+
+	USBPHY_SET32(0x68, (0x1 << 18));
+	USBPHY_CLR32(0x68, (0x1 << 3));
+	USBPHY_SET32(0x68, (0x1 << 3));
+	udelay(30);
+	USBPHY_CLR32(0x68, (0x1 << 18));
+	USBPHY_CLR32(0x68, (0x1 << 3));
+
+	if (enable) {
+		regmap_read(pericfg, USB_WAKEUP_DEC_CON1, &tmp);
+		tmp |= USB1_CDDEBOUNCE(0x8) | USB1_CDEN;
+		regmap_write(pericfg, USB_WAKEUP_DEC_CON1, tmp);
+
+		tmp = musb_readw(musb->mregs, RESREG);
+		if (is_con)
+			tmp &= ~HSTPWRDWN_OPT;
+		else
+			tmp |= HSTPWRDWN_OPT;
+		musb_writew(musb->mregs, RESREG, tmp);
+	} else {
+		regmap_read(pericfg, USB_WAKEUP_DEC_CON1, &tmp);
+		tmp &= ~(USB1_CDEN | USB1_CDDEBOUNCE(0xf));
+		regmap_write(pericfg, USB_WAKEUP_DEC_CON1, tmp);
+
+		tmp = musb_readw(musb->mregs, RESREG);
+		tmp &= ~HSTPWRDWN_OPT;
+		musb_writew(musb->mregs, RESREG, tmp);
+	}
+}
+
+static int mt_usb_wakeup_init(struct musb *musb)
+{
+	struct device_node *node;
+
+	node = of_find_compatible_node(NULL, NULL,
+					"mediatek,mt6781-usb20");
+	if (!node) {
+		DBG(0, "map node failed\n");
+		return -ENODEV;
+	}
+
+	pericfg = syscon_regmap_lookup_by_phandle(node,
+					"pericfg");
+	if (IS_ERR(pericfg)) {
+		DBG(0, "fail to get pericfg regs\n");
+		return PTR_ERR(pericfg);
+	}
+
+	return 0;
+}
+#endif
+
+
 static u32 cable_mode = CABLE_MODE_NORMAL;
 #ifndef FPGA_PLATFORM
 struct clk *musb_clk;

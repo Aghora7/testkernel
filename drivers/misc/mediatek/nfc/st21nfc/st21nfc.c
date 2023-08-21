@@ -41,6 +41,7 @@
 #include <linux/of_irq.h>
 #include "st21nfc.h"
 
+#include <linux/board_id.h>
 
 // Kernel 4.9 on some platforms is using legacy drivers (kernel-4.9-lc)
 // I2C: CONFIG_MACH_MT6735 / 6735M / 6753 / 6580 / 6755 use legacy driver
@@ -66,6 +67,8 @@
 #endif
 
 #define MAX_BUFFER_SIZE 260
+#define MAX_SIZE 255
+#define PBF      4
 #define HEADER_LENGTH 3
 #define IDLE_CHARACTER 0x7e
 #define ST21NFC_POWER_STATE_MAX 3
@@ -88,7 +91,8 @@ static char *I2CDMAReadBuf; /*= NULL;*/  /* unnecessary initialise */
 static unsigned int I2CDMAReadBuf_pa;    /* = NULL; */
 #endif                                   /* KRNMTKLEGACY_I2C */
 
-static bool enable_debug_log;
+static bool enable_debug_log = false;
+static bool bandwidth_test   = false;
 
 /*The enum is used to index a pw_states array, the values matter here*/
 enum st21nfc_power_state {
@@ -199,12 +203,30 @@ static int st21nfc_clock_select(struct st21nfc_device *st21nfc_dev)
 /*
  * Routine to disable clocks
  */
-static int st21nfc_clock_deselect(struct st21nfc_device *st21nfc_dev)
-{
+static int st21nfc_clock_deselect(struct st21nfc_device *st21nfc_dev) {
 #ifndef NO_MTK_CLK_MANAGEMENT
 	clk_buf_ctrl(CLK_BUF_NFC, false);
 #endif
 	return 0;
+}
+
+static void st21nfc_print_buffer(char *buf, int count) {
+	char tmpStr[MAX_BUFFER_SIZE * 2 + 1] = { 0x00 };
+	int i = 0;
+	for(i = 0; i < count; i++){
+	    snprintf(&tmpStr[i *2], 3, "%02X", buf[i]);
+	}
+	pr_info("%s: %s\n", __func__, tmpStr);
+}
+//vts data compare
+static int  st21nfc_vts_compare(char *buf,int count) {
+	 
+	int i = 0;
+	for(i = 0; i < count; i++){
+	   if(buf[i]!=i) 
+	   {return 0;}
+	}
+	return 1;
 }
 
 static void st21nfc_disable_irq(struct st21nfc_device *st21nfc_dev)
@@ -234,6 +256,8 @@ static void st21nfc_enable_irq(struct st21nfc_device *st21nfc_dev)
 static irqreturn_t st21nfc_dev_irq_handler(int irq, void *dev_id)
 {
 	struct st21nfc_device *st21nfc_dev = dev_id;
+	if (enable_debug_log)
+		pr_info("%s:%d mode %d", __FILE__, __LINE__);
 
 	if (device_may_wakeup(&st21nfc_dev->client->dev))
 		pm_wakeup_event(&st21nfc_dev->client->dev, WAKEUP_SRC_TIMEOUT);
@@ -543,6 +567,8 @@ static ssize_t st21nfc_dev_read(
 	}
 #endif  // ST21NFCD_MTK
 
+        st21nfc_print_buffer(st21nfc_dev->buffer, ret);
+         
 	if (copy_to_user(buf, st21nfc_dev->buffer, ret)) {
 		pr_warn("%s : failed to copy to user space\n", __func__);
 		return -EFAULT;
@@ -559,6 +585,7 @@ static ssize_t st21nfc_dev_write(struct file *filp, const char __user *buf,
 			struct st21nfc_device, st21nfc_device);
 	char *tmp = NULL;
 	int ret = count;
+        bandwidth_test = false;
 
 	if (enable_debug_log) {
 		//pr_debug("%s: st21nfc_dev ptr %p\n", __func__, st21nfc_dev);
@@ -573,6 +600,8 @@ static ssize_t st21nfc_dev_write(struct file *filp, const char __user *buf,
 		pr_err("%s : memdup_user failed\n", __func__);
 		return -EFAULT;
 	}
+	
+	st21nfc_print_buffer(tmp, ret);
 
 	/* Write data */
 #ifdef KRNMTKLEGACY_I2C
@@ -584,10 +613,29 @@ static ssize_t st21nfc_dev_write(struct file *filp, const char __user *buf,
 	/* st21nfc_dev->platform_data.client->ext_flag |= I2C_A_FILTER_MSG; */
 	st21nfc_dev->client->timing = NFC_CLIENT_TIMING;
 
-	ret = i2c_master_send(st21nfc_dev->client,
-		(unsigned char *)(uintptr_t)I2CDMAWriteBuf_pa, count);
+    //identify this is cts bandwidth test
+    if(count == 258 && I2CDMAWriteBuf_pa[0] == 0x04 &&  I2CDMAWriteBuf_pa[1] == 0x00 && I2CDMAWriteBuf_pa[2] == 0xFF && st21nfc_vts_compare( (unsigned char *)(I2CDMAWriteBuf_pa+3),count-3) ==1){
+          bandwidth_test = true;
+          //bandwith payload length = 0xff -3 = 0xfc
+          I2CDMAWriteBuf_pa[2] = 0xfc;
+	  ret = i2c_master_send(st21nfc_dev->client,
+	    (unsigned char *)(uintptr_t)I2CDMAWriteBuf_pa, MAX_SIZE);
+          ret += HEADER_LENGTH ;
+	} else {
+		ret = i2c_master_send(st21nfc_dev->client,
+	    (unsigned char *)(uintptr_t)I2CDMAWriteBuf_pa, count);
+	}
 #else
-	ret = i2c_master_send(st21nfc_dev->client, tmp, count);
+	       //identify this is cts bandwidth test
+    if(count == 258 && tmp[0] == 0x04 &&  tmp[1] == 0x00 && tmp[2] == 0xFF && st21nfc_vts_compare( (unsigned char *)(tmp+3),count-3) ==1)  { 
+          bandwidth_test = true;
+          //bandwith payload length = 0xff -3 = 0xfc
+          tmp[2] = 0xfc;
+          ret = i2c_master_send(st21nfc_dev->client, tmp, MAX_SIZE);
+          ret += HEADER_LENGTH ;
+	} else {
+	    ret = i2c_master_send(st21nfc_dev->client, tmp, count);
+	}
 #endif
 	if (ret != count) {
 		pr_err("%s : i2c_master_send returned %d\n", __func__, ret);
@@ -822,15 +870,9 @@ static unsigned int st21nfc_poll(struct file *file, poll_table *wait)
 		st21nfc_disable_irq(st21nfc_dev);
 	} else {
 		/* Wake_up_pin is low. Activate ISR  */
-		if (!st21nfc_dev->irq_enabled) {
-			if (enable_debug_log)
-				pr_debug("%s enable irq\n", __func__);
-
-			st21nfc_enable_irq(st21nfc_dev);
-		} else {
-			if (enable_debug_log)
-				pr_debug("%s irq already enabled\n", __func__);
-		}
+		if (enable_debug_log)
+			pr_debug("%s enable irq\n", __func__);
+		st21nfc_enable_irq(st21nfc_dev);
 	}
 	return mask;
 }
@@ -960,11 +1002,15 @@ static ssize_t power_stats_show(struct device *dev,
 		"\nError transition header --> payload state machine: 0x%llx\n"
 		"Error transition from an Active state when not in Idle state: 0x%llx\n"
 		"Error transition from Idle state to Idle state: 0x%llx\n"
-		"Warning transition from Active Reader/Writer state to Idle state: 0x%llx\n"
-		"Error transition from Active state to Active state: 0x%llx\n"
-		"Error transition from Idle state to Active state with notification: 0x%llx\n"
-		"Error transition from Active Reader/Writer state to Active Reader/Writer state: 0x%llx\n"
-		"Error transition from Idle state to Active Reader/Writer state with notification: 0x%llx\n"
+      "Warning transition from Active Reader/Writer state to Idle state: "
+      "0x%llx\n"
+      "Error transition from Active state to Active state: 0x%llx\n"
+      "Error transition from Idle state to Active state with notification: "
+      "0x%llx\n"
+      "Error transition from Active Reader/Writer state to Active "
+      "Reader/Writer state: 0x%llx\n"
+      "Error transition from Idle state to Active Reader/Writer state with "
+      "notification: 0x%llx\n"
 		"\nTotal uptime: 0x%llx Cumulative modes time: 0x%llx\n",
 		data->c_pw_states[ST21NFC_IDLE].count, idle_duration,
 		data->c_pw_states[ST21NFC_IDLE].last_entry,
@@ -1363,13 +1409,26 @@ static struct platform_driver st21nfc_platform_driver = {
 /* module load/unload record keeping */
 static int __init st21nfc_dev_init(void)
 {
+	int project_number;
 	pr_info("Loading st21nfc driver\n");
+	//get hwversion number
+	project_number = board_id_get_hwversion_product_num();
+	
+
 #ifndef KRNMTKLEGACY_GPIO
 	platform_driver_register(&st21nfc_platform_driver);
 	if (enable_debug_log)
 		pr_debug("Loading st21nfc i2c driver\n");
 #endif
-	return i2c_add_driver(&st21nfc_driver);
+
+	if(project_number == 2) 
+	{
+		pr_info("%s: support NFC\n", __func__);
+		return i2c_add_driver(&st21nfc_driver);
+	} else {
+		pr_err("%s: not supports NFC\n", __func__);
+		return -ENODEV;
+	}
 }
 
 module_init(st21nfc_dev_init);

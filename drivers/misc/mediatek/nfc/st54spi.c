@@ -31,18 +31,7 @@
 
 #include <linux/uaccess.h>
 
-// Do we need to control the clock of SPI master ?
 // #define WITH_SPI_CLK_MNGT 1
-
-// Is the SPI_NSS signal highZ from platform side when SPI not used (i.e. used as open-drain)
-#define WITH_SPI_NSS_HIGHZ 1
-// Note:
-// if SPI_NSS is open-drain, the eSE will drive the line high when powered on and low when off.
-// If it is not open-drain, we will keep the eSE powered always
-// when EE_MODE_SET is set to enabled in CLF
-// This is the only way to avoid SPI_NSS high from host when VCC_SE is low
-// AND avoid SPI_NSS low when VCC_SE is high but SPI not used.
-
 
 #include "st21nfc/st21nfc.h"
 
@@ -419,8 +408,8 @@ static void st54spi_power_off(struct st54spi_data *st54spi)
 	ret = pinctrl_select_state(st54spi->pctrl, st54spi->pctrl_mode_idle);
 
 	if (ret < 0) {
-		dev_info(DEV, "%s : change CSB management to High Z failed!\n",
-			__func__);
+		dev_err(&st54spi->spi->dev,
+				"%s : change CSB management to High Z failed!\n", __func__);
 	}
 
 	st54spi->se_is_poweron = 0;

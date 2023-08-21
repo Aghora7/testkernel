@@ -11,8 +11,9 @@
 # GNU General Public License for more details.
 #
 
-
 # AP object
 obj-y += mtk-auddrv-clk.o
 obj-y += mtk-soc-afe-connection.o
 obj-y += mt6765-sound.o
+obj-y += gc02m1_macro_ofilm_mipi_raw.o
+obj-y += gc02m1_macro_ofilm_mipi_raw_eeprom.o

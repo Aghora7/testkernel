@@ -46,7 +46,6 @@
 #include "mtk-scp-ultra_dump.h"
 #include "mtk-scp-ultra-common.h"
 
-
 #define DUMP_ULTRA_PCM_DATA_PATH "/data/vendor/audiohal/audio_dump"
 #define FRAME_BUF_SIZE (8192)
 static struct wakeup_source wakelock_ultra_dump_lock;
@@ -191,8 +190,7 @@ int ultra_open_dump_file(void)
 			__func__, path_dataout_pcm);
 
 	fp_pcm_in = filp_open(path_datain_pcm,
-			O_CREAT | O_WRONLY | O_LARGEFILE | O_NOFOLLOW,
-			0);
+			O_CREAT | O_WRONLY | O_LARGEFILE, 0);
 	if (IS_ERR(fp_pcm_in)) {
 		pr_info("%s(), %s file open error: %ld\n",
 				__func__,
@@ -202,7 +200,7 @@ int ultra_open_dump_file(void)
 	}
 	fp_pcm_out = filp_open(
 			path_dataout_pcm,
-			O_CREAT | O_WRONLY | O_LARGEFILE | O_NOFOLLOW,
+			O_CREAT | O_WRONLY | O_LARGEFILE,
 			0);
 	if (IS_ERR(fp_pcm_out)) {
 		pr_info("%s(), %s file open error: %ld\n",
@@ -445,14 +443,14 @@ void audio_ipi_client_ultra_init(void)
 	pr_info("%s()", __func__);
 	if (ultra_dump_mem.start_virt == NULL) {
 		pr_info("%s() ultra_dump_mem.start_virt:%p", __func__,
-			ultra_dump_mem.start_virt);
+				ultra_dump_mem.start_virt);
 	}
 	aud_wake_lock_init(&wakelock_ultra_dump_lock, "ultradump lock");
 
 	dump_workqueue[DUMP_PCM_IN] = create_workqueue("dump_ultra_pcm_in");
 	if (dump_workqueue[DUMP_PCM_IN] == NULL) {
 		pr_notice("dump_workqueue[DUMP_PCM_IN] = %p\n",
-			  dump_workqueue[DUMP_PCM_IN]);
+				dump_workqueue[DUMP_PCM_IN]);
 		AUDIO_AEE("dump_workqueue[DUMP_PCM_IN] == NULL");
 	}
 
@@ -460,7 +458,7 @@ void audio_ipi_client_ultra_init(void)
 			create_workqueue("dump_ultra_pcm_out");
 	if (dump_workqueue[DUMP_PCM_OUT] == NULL) {
 		pr_notice("dump_workqueue[DUMP_PCM_OUT] = %p\n",
-			  dump_workqueue[DUMP_PCM_OUT]);
+				dump_workqueue[DUMP_PCM_OUT]);
 		AUDIO_AEE("dump_workqueue[DUMP_PCM_OUT] == NULL");
 	}
 

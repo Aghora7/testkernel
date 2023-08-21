@@ -34,7 +34,6 @@
 #define aud_wake_lock_destroy(ws) wakeup_source_trash(ws)
 #define aud_wake_lock(ws) __pm_stay_awake(ws)
 #define aud_wake_unlock(ws) __pm_relax(ws)
-
 enum {
 	SCP_ULTRA_STAGE_OFF,
 	SCP_ULTRA_STAGE_NORMAL_PLAYBACK,
